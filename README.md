@@ -1,6 +1,3 @@
-# Elastic Agent builder demo
-
-
 # Elastic Agent Builder NBA Demo
 
 A comprehensive solution for real-time NBA game analysis and commentary  using Elasticsearch and Elastic Agent Builder.
