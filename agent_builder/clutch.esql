@@ -1,0 +1,51 @@
+FROM nba_player_game_logs_enhanced
+| WHERE points >= 25
+| EVAL
+    is_clutch = (
+        (points >= 30 AND game_result == "W") OR
+        (points >= 25 AND ABS(plus_minus) >= 15 AND game_result == "W") OR
+        (points >= 20 AND assists >= 8 AND game_result == "W")
+    )
+| WHERE is_clutch == true
+| STATS
+    clutch_games = COUNT(*),
+    clutch_wins = SUM(CASE(game_result == "W", 1, 0)),
+    avg_clutch_points = AVG(points),
+    avg_clutch_assists = AVG(assists),
+    avg_clutch_rebounds = AVG(total_rebounds),
+    avg_plus_minus = AVG(plus_minus),
+    clutch_fg_pct = AVG(field_goal_pct),
+    clutch_three_pct = AVG(three_point_pct),
+    total_clutch_points = SUM(points),
+    career_best_clutch = MAX(points),
+    clutch_efficiency = AVG((points + total_rebounds + assists - turnovers) / minutes_played) * 100,
+    game_winners = SUM(CASE(points >= 30 AND game_result == "W" AND ABS(plus_minus) >= 15, 1, 0)),
+    seasons_active = COUNT_DISTINCT(season),
+    double_doubles_clutch = SUM(CASE(double_double == true, 1, 0)),
+    triple_doubles_clutch = SUM(CASE(triple_double == true, 1, 0))
+  BY player_name
+| WHERE clutch_games >= 10
+| EVAL
+    player = player_name,
+    games = clutch_games,
+    wins = clutch_wins,
+    win_rate = ROUND(clutch_wins / clutch_games * 100, 1),
+    ppg = ROUND(avg_clutch_points, 1),
+    apg = ROUND(avg_clutch_assists, 1),
+    rpg = ROUND(avg_clutch_rebounds, 1),
+    plus_minus_avg = ROUND(avg_plus_minus, 1),
+    fg_percentage = ROUND(clutch_fg_pct, 1),
+    three_percentage = ROUND(clutch_three_pct, 1),
+    total_points = total_clutch_points,
+    best_performance = career_best_clutch,
+    efficiency_rating = ROUND(clutch_efficiency, 2),
+    game_winner_count = game_winners,
+    seasons = seasons_active,
+    dd_count = double_doubles_clutch,
+    td_count = triple_doubles_clutch,
+    clutch_score = ROUND((win_rate * 0.3) + (ppg * 2) + (efficiency_rating * 0.5) + (game_winners * 5), 1)
+| SORT clutch_score DESC
+| LIMIT 30
+| KEEP player, games, wins, win_rate, ppg, apg, rpg, plus_minus_avg, fg_percentage,
+       three_percentage, total_points, best_performance, efficiency_rating,
+       game_winner_count, dd_count, td_count, clutch_score

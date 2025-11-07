@@ -1,0 +1,49 @@
+FROM nba_games_enhanced
+| WHERE (home_team_abbreviation == ?team1 AND away_team_abbreviation == ?team2)
+    OR (home_team_abbreviation == ?team2 AND away_team_abbreviation == ?team1)
+| EVAL
+    team1_is_home = home_team_abbreviation == ?team1,
+    team1_points = CASE(team1_is_home, home_points, away_points),
+    team2_points = CASE(team1_is_home, away_points, home_points),
+    team1_won = CASE(
+        team1_is_home AND winner == "home", true,
+        NOT team1_is_home AND winner == "away", true,
+        false
+    ),
+    point_margin = team1_points - team2_points,
+    is_close = ABS(point_margin) <= 5,
+    is_blowout = ABS(point_margin) >= 20
+| STATS
+    games = COUNT(*),
+    team1_wins = SUM(CASE(team1_won == true, 1, 0)),
+    team2_wins = SUM(CASE(team1_won == false, 1, 0)),
+    team1_avg_points = AVG(team1_points),
+    team2_avg_points = AVG(team2_points),
+    avg_margin = AVG(point_margin),
+    team1_home_wins = SUM(CASE(team1_won == true AND team1_is_home == true, 1, 0)),
+    team1_away_wins = SUM(CASE(team1_won == true AND team1_is_home == false, 1, 0)),
+    close_games = SUM(CASE(is_close == true, 1, 0)),
+    blowouts = SUM(CASE(is_blowout == true, 1, 0)),
+    overtime_games = SUM(CASE(overtime == true, 1, 0)),
+    highest_scoring = MAX(team1_points + team2_points),
+    lowest_scoring = MIN(team1_points + team2_points)
+  BY season
+| EVAL
+    season_year = season,
+    total_games = games,
+    team1_record = CONCAT(TO_STRING(team1_wins), "-", TO_STRING(team2_wins)),
+    team1_win_percentage = ROUND(team1_wins / games * 100, 1),
+    team1_ppg = ROUND(team1_avg_points, 1),
+    team2_ppg = ROUND(team2_avg_points, 1),
+    average_margin = ROUND(avg_margin, 1),
+    home_record = team1_home_wins,
+    away_record = team1_away_wins,
+    close_game_count = close_games,
+    blowout_count = blowouts,
+    ot_count = overtime_games,
+    highest_combined = highest_scoring,
+    lowest_combined = lowest_scoring
+| SORT season_year DESC
+| KEEP season_year, total_games, team1_record, team1_win_percentage, team1_ppg, team2_ppg,
+       average_margin, home_record, away_record, close_game_count, blowout_count,
+       ot_count, highest_combined, lowest_combined
