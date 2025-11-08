@@ -1,0 +1,26 @@
+output_sink: elasticsearch
+output_index: search-nba-espn
+
+elasticsearch:
+  host: https://hackathon-nba-e80311.es.eu-central-1.aws.elastic.cloud
+  port: 443
+  api_key: aDFlMk1ab0J1MGNNdE13SFd0bng6bWhjV1lHU3FVeTIxMWR4ZDRtOEZDQQ==
+  pipeline_enabled: false
+
+
+domains:
+  - url: https://www.espn.com
+    seed_urls:
+      - https://www.espn.com/nba/
+      - https://www.espn.com/fantasy/basketball/story
+
+    crawl_rules:
+      - policy: allow
+        type: begins
+        pattern: /nba/story
+      - policy: allow
+        type: begins
+        pattern: /fantasy/basketball/story
+      - policy: deny
+        type: regex
+        pattern: .*

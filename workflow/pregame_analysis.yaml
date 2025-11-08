@@ -1,0 +1,24 @@
+name: New workflow
+enabled: false
+triggers:
+    - type: manual
+inputs:
+  - name: agent_id
+    type: string
+    description: The ID of the agent to invoke
+    required: true
+  - name: question
+    type: string
+    description: The question or prompt to send to the subagent
+    required: true
+steps:
+  - name: converse_with_agent
+    type: kibana.post_agent_builder_converse
+    with:
+      agent_id: "{{ inputs.agent_id }}"
+      input: "{{ inputs.question }}"
+  - name: slack_step
+    type: slack
+    connector-id: test
+    with:
+      message: "{{ steps.converse_with_agent.output.response.message }}"

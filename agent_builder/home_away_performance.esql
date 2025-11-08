@@ -1,0 +1,24 @@
+FROM nba_games_enhanced
+| WHERE season == "2025-26"
+| STATS
+    home_games = COUNT(*),
+    home_wins = SUM(CASE(winner == "home", 1, 0)),
+    home_avg_points = ROUND(AVG(home_points), 1),
+    home_avg_fg_pct = ROUND(AVG(home_field_goal_pct), 1),
+    home_avg_3p_pct = ROUND(AVG(home_three_point_pct), 1),
+    away_games = COUNT(*),
+    away_wins = SUM(CASE(winner == "away", 1, 0)),
+    away_avg_points = ROUND(AVG(away_points), 1),
+    away_avg_fg_pct = ROUND(AVG(away_field_goal_pct), 1),
+    away_avg_3p_pct = ROUND(AVG(away_three_point_pct), 1)
+  BY home_team_abbreviation
+| EVAL
+    home_win_pct = ROUND(TO_DOUBLE(home_wins) / TO_DOUBLE(home_games) * 100, 1),
+    away_win_pct = ROUND(TO_DOUBLE(away_wins) / TO_DOUBLE(away_games) * 100, 1),
+    home_advantage = ROUND(home_win_pct - away_win_pct, 1),
+    point_differential = ROUND(home_avg_points - away_avg_points, 1)
+| SORT home_advantage DESC
+| KEEP home_team_abbreviation, home_games, home_wins, home_win_pct,
+        away_games, away_wins, away_win_pct,
+        home_advantage, point_differential,
+        home_avg_points, away_avg_points
