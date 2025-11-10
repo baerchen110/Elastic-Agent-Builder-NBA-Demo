@@ -22,8 +22,8 @@ export default function MessageBubble({ message, isStreaming }: MessageBubblePro
       {!isUser && (
         <div className={cn(
           'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg',
-          isStreaming 
-            ? 'bg-gradient-to-br from-blue-400 to-cyan-400 animate-pulse' 
+          isStreaming
+            ? 'bg-gradient-to-br from-blue-400 to-cyan-400 animate-pulse'
             : 'bg-gradient-to-br from-blue-400 to-cyan-400'
         )}>
           <span className="text-lg">🤖</span>
@@ -37,8 +37,8 @@ export default function MessageBubble({ message, isStreaming }: MessageBubblePro
       )}>
         <div className={cn(
           'px-5 py-3 rounded-2xl backdrop-blur-md border transition-all duration-200 hover:shadow-lg',
-          isUser 
-            ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-400/50 text-white rounded-br-md shadow-lg' 
+          isUser
+            ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-400/50 text-white rounded-br-md shadow-lg'
             : 'bg-gradient-to-br from-slate-700/60 to-slate-800/60 border-blue-400/20 text-gray-100 rounded-bl-md hover:border-blue-400/40',
           isStreaming && 'border-blue-400/60'
         )}>
@@ -124,12 +124,12 @@ export default function MessageBubble({ message, isStreaming }: MessageBubblePro
               </p>
               <div className="flex flex-wrap gap-2">
                 {message.tools_used.map(tool => (
-                  <span 
+                  <span
                     key={tool}
                     className={cn(
                       'px-3 py-1 rounded-full text-xs font-semibold transition-colors',
-                      isUser 
-                        ? 'bg-blue-500/40 text-blue-100' 
+                      isUser
+                        ? 'bg-blue-500/40 text-blue-100'
                         : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
                     )}
                   >

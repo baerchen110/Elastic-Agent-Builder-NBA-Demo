@@ -261,31 +261,31 @@ async def get_deepagent_response(
 
     try:
         from main import invoke_workflow
-        
+
         # Get orchestrator
         orchestrator = DeepAgentOrchestrator()
-        
+
         # Define agent functions
         async def stats_agent_fn(q: str):
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, invoke_workflow, q)
-        
+
         async def media_agent_fn(q: str):
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, invoke_workflow, q)
-        
+
         agents = {
             "stats_agent": stats_agent_fn,
             "media_agent": media_agent_fn
         }
-        
+
         # Get DeepAgent orchestration
         orchestration = await orchestrator.orchestrate_query(query, agents)
-        
+
         # Run main workflow
         loop = asyncio.get_event_loop()
         workflow_result = await loop.run_in_executor(None, invoke_workflow, query)
-        
+
         return {
             "success": workflow_result.get("success", False),
             "query": query,
@@ -298,12 +298,12 @@ async def get_deepagent_response(
             },
             "error": workflow_result.get("error")
         }
-    
+
     except Exception as e:
         logger.error(f"[DEEPAGENT] Error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        
+
         return {
             "success": False,
             "error": str(e),
@@ -339,17 +339,17 @@ async def get_available_agents():
 @app.post("/api/query", response_model=QueryResponse)
 async def process_query(request: QueryRequest):
     """Standard query endpoint (LangGraph only)"""
-    
+
     query = request.query.strip()
-    
+
     if not query:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
-    
+
     logger.info(f"[API] Standard query: {query[:50]}...")
-    
+
     try:
         response_data = await get_workflow_response(query)
-        
+
         return QueryResponse(
             success=response_data["success"],
             result=response_data.get("result", "No response"),
@@ -357,7 +357,7 @@ async def process_query(request: QueryRequest):
             status=response_data.get("status", "completed"),
             error=response_data.get("error")
         )
-    
+
     except Exception as e:
         logger.error(f"[API] Error: {str(e)}")
         return QueryResponse(
@@ -372,14 +372,14 @@ async def process_query(request: QueryRequest):
 @app.post("/api/query/deepagent", response_model=DeepAgentQueryResponse)
 async def process_query_with_deepagent(request: DeepAgentQueryRequest):
     """Enhanced query endpoint with DeepAgent orchestration"""
-    
+
     query = request.query.strip()
-    
+
     if not query:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
-    
+
     logger.info(f"[API] DeepAgent query: {query[:50]}...")
-    
+
     try:
         response_data = await get_deepagent_response(
             query=query,
@@ -387,7 +387,7 @@ async def process_query_with_deepagent(request: DeepAgentQueryRequest):
             max_iterations=request.max_iterations,
             temperature=request.temperature
         )
-        
+
         return DeepAgentQueryResponse(
             success=response_data.get("success", False),
             query=query,
@@ -396,7 +396,7 @@ async def process_query_with_deepagent(request: DeepAgentQueryRequest):
             orchestration_insights=response_data.get("orchestration_insights"),
             error=response_data.get("error")
         )
-    
+
     except Exception as e:
         logger.error(f"[API] DeepAgent error: {str(e)}")
         return DeepAgentQueryResponse(
@@ -413,7 +413,7 @@ async def process_query_with_deepagent(request: DeepAgentQueryRequest):
 async def deepagent_status():
     """Get DeepAgent status"""
     orchestrator = DeepAgentOrchestrator()
-    
+
     return {
         "deepagent_available": orchestrator.deepagent_available,
         "status": "ready" if orchestrator.deepagent_available else "fallback",
@@ -481,14 +481,14 @@ async def shutdown_event():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     PORT = int(os.getenv("FASTAPI_PORT", 3002))
     HOST = os.getenv("FASTAPI_HOST", "0.0.0.0")
-    
+
     logger.info(f"🏀 Backend running on http://{HOST}:{PORT}")
     logger.info(f"   Standard API: http://{HOST}:{PORT}/api/query")
     logger.info(f"   DeepAgent API: http://{HOST}:{PORT}/api/query/deepagent")
-    
+
     uvicorn.run(
         "api_server_with_deepagent:app",
         host=HOST,

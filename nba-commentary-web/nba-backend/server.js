@@ -1,26 +1,14 @@
 /**
- * Node.js WebSocket Server - Bridge to FastAPI Backend
+ * Node.js WebSocket Server with Streaming Support - FIXED
+ * No external EventSource dependency - uses native fetch streaming
  *
- * This server acts as a WebSocket gateway for your React frontend.
- * Instead of calling Kibana directly, it forwards requests to the Python FastAPI backend.
+ * Features:
+ * - WebSocket gateway for React frontend
+ * - Native Node.js streaming (no external deps for SSE)
+ * - Real-time progress updates
  *
- * Architecture:
- *   Browser (WebSocket)
- *        ↓
- *   Node.js server.js (this file)
- *        ↓
- *   Python FastAPI Backend (api_server.py)
- *        ↓
- *   LangGraph Multi-Agent System
- *        ↓
- *   Elastic Agent Builder
- *
- * Usage:
- *   npm install
- *   node server.js
- *
- * The server listens on ws://localhost:3001
- * FastAPI backend should be running on http://localhost:3002
+ * NO NEED TO INSTALL: npm install eventsource
+ * Just works with Node.js built-in modules!
  */
 
 import express from 'express';
@@ -41,20 +29,14 @@ app.use(express.json());
 
 // ===== CONFIGURATION =====
 
-// Python FastAPI backend URL
 const PYTHON_BACKEND = process.env.PYTHON_BACKEND || 'http://localhost:3002';
-const PYTHON_WS_BACKEND = process.env.PYTHON_WS_BACKEND || 'ws://localhost:3002';
-
-// Port for this Node.js server
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
 console.log('⚙️  Configuration:');
 console.log(`   Node.js Server: http://${HOST}:${PORT}`);
-console.log(`   Python Backend (REST): ${PYTHON_BACKEND}`);
-console.log(`   Python Backend (WebSocket): ${PYTHON_WS_BACKEND}`);
+console.log(`   Python Backend: ${PYTHON_BACKEND}`);
 
-// Track active WebSocket connections to Python backend
 const clientConnections = new Map();
 
 // ===== REST ENDPOINTS =====
@@ -63,7 +45,8 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     message: '🏀 NBA Multi-Agent Backend Running',
-    version: '1.0.0',
+    version: '2.1.0',
+    features: ['streaming', 'websocket', 'multi-agent'],
     backend: 'FastAPI (Python)',
     python_backend: PYTHON_BACKEND
   });
@@ -90,7 +73,6 @@ wss.on('connection', (ws) => {
   const clientId = Math.random().toString(36).substr(2, 9);
   console.log(`✅ Client connected: ${clientId}`);
 
-  // Store connection info
   const connectionInfo = {
     clientId,
     connectedAt: new Date(),
@@ -105,8 +87,118 @@ wss.on('connection', (ws) => {
 
       console.log(`📨 Message from ${clientId}: ${message.type}`);
 
-      // ===== HANDLE QUERY =====
-      if (message.type === 'query') {
+      // ===== HANDLE STREAMING QUERY =====
+      if (message.type === 'query_stream') {
+        const { query, chunk_size = 1, delay_ms = 50 } = message;
+
+        if (!query || !query.trim()) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            content: 'Please enter a query',
+            success: false,
+            timestamp: new Date().toISOString()
+          }));
+          return;
+        }
+
+        // Send loading indicator
+        ws.send(JSON.stringify({
+          type: 'status',
+          content: '⏳ Starting stream...',
+          timestamp: new Date().toISOString()
+        }));
+
+        try {
+          console.log(`🚀 Starting stream from Python backend: ${query.substring(0, 50)}...`);
+
+          // Stream from FastAPI backend using native fetch
+          const streamUrl = `${PYTHON_BACKEND}/api/query/stream`;
+
+          const response = await fetch(streamUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'text/event-stream'
+            },
+            body: JSON.stringify({
+              query,
+              chunk_size,
+              delay_ms
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          // Read streaming response using native ReadableStream
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+              console.log('✅ Stream complete');
+              break;
+            }
+
+            // Decode chunk
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete SSE messages
+            const lines = buffer.split('\n');
+            buffer = lines[lines.length - 1]; // Keep incomplete line
+
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i];
+
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.substring(6));
+
+                  console.log(`📤 Stream chunk: type=${data.type}, progress=${data.progress}%`);
+
+                  // Forward to WebSocket client
+                  ws.send(JSON.stringify({
+                    type: data.type,
+                    content: data.content,
+                    fullContent: data.full_content,
+                    progress: data.progress,
+                    wordsSent: data.words_sent,
+                    totalWords: data.total_words,
+                    success: data.success,
+                    timestamp: data.timestamp
+                  }));
+
+                } catch (e) {
+                  console.error('Error parsing SSE data:', e.message);
+                }
+              }
+            }
+          }
+
+        } catch (error) {
+          console.error(`❌ Error streaming from Python backend:`, error.message);
+
+          let errorMessage = error.message;
+
+          if (error.message.includes('ECONNREFUSED')) {
+            errorMessage = 'Cannot connect to Python backend. Make sure it\'s running on port 3002';
+          }
+
+          ws.send(JSON.stringify({
+            type: 'error',
+            content: `⚠️ ${errorMessage}`,
+            success: false,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      }
+
+      // ===== HANDLE STANDARD QUERY (Non-streaming) =====
+      else if (message.type === 'query') {
         const { query } = message;
 
         if (!query || !query.trim()) {
@@ -122,12 +214,11 @@ wss.on('connection', (ws) => {
         // Send loading indicator
         ws.send(JSON.stringify({
           type: 'status',
-          content: '⏳ Analyzing your question with multi-agent system...',
+          content: '⏳ Analyzing your question...',
           timestamp: new Date().toISOString()
         }));
 
         try {
-          // Option 1: Use HTTP REST API (simpler)
           console.log(`🚀 Calling Python backend for query: ${query.substring(0, 50)}...`);
 
           const response = await axios.post(
@@ -135,7 +226,7 @@ wss.on('connection', (ws) => {
             { query },
             {
               headers: { 'Content-Type': 'application/json' },
-              timeout: 120000 // 2 minute timeout for complex queries
+              timeout: 120000
             }
           );
 
@@ -162,15 +253,10 @@ wss.on('connection', (ws) => {
         } catch (error) {
           console.error(`❌ Error calling Python backend:`, error.message);
 
-          // Provide helpful error messages
           let errorMessage = error.message;
 
           if (error.code === 'ECONNREFUSED') {
             errorMessage = 'Cannot connect to Python backend. Make sure api_server.py is running on port 3002';
-          } else if (error.code === 'ENOTFOUND') {
-            errorMessage = 'Python backend not found. Check PYTHON_BACKEND configuration';
-          } else if (error.response?.status === 404) {
-            errorMessage = 'Python backend endpoint not found. Check if api_server.py is running correctly';
           }
 
           ws.send(JSON.stringify({
@@ -233,9 +319,6 @@ wss.on('connection', (ws) => {
 
 // ===== HELPER FUNCTIONS =====
 
-/**
- * Stream response word by word to create typing effect
- */
 async function streamResponse(ws, content, agentsUsed = []) {
   const words = content.split(' ');
   let streamedContent = '';
@@ -275,18 +358,23 @@ async function streamResponse(ws, content, agentsUsed = []) {
 httpServer.listen(PORT, HOST, () => {
   console.log('');
   console.log('═'.repeat(60));
-  console.log('🏀 NBA Multi-Agent WebSocket Server');
+  console.log('🏀 NBA Multi-Agent WebSocket Server v2.1');
   console.log('═'.repeat(60));
   console.log(`✅ Server running on http://${HOST}:${PORT}`);
   console.log(`✅ WebSocket endpoint: ws://${HOST}:${PORT}`);
   console.log(`✅ Health check: http://${HOST}:${PORT}/health`);
-  console.log(`✅ Available agents: http://${HOST}:${PORT}/api/agents`);
+  console.log('');
+  console.log('Features:');
+  console.log('  ✓ WebSocket gateway');
+  console.log('  ✓ Server-Sent Events (SSE) streaming');
+  console.log('  ✓ Word-by-word response streaming');
+  console.log('  ✓ Real-time progress updates');
+  console.log('  ✓ Native Node.js (no external deps!)');
   console.log('');
   console.log('Connected to Python FastAPI Backend:');
   console.log(`   REST API: ${PYTHON_BACKEND}`);
-  console.log(`   WebSocket: ${PYTHON_WS_BACKEND}`);
   console.log('');
-  console.log('💡 Frontend connects to: ws://localhost:3001');
+  console.log('Frontend connects to: ws://localhost:3001');
   console.log('═'.repeat(60));
   console.log('');
 });
@@ -301,5 +389,4 @@ process.on('SIGINT', () => {
   });
 });
 
-// Export for testing
 export { app, wss, streamResponse };
