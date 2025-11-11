@@ -1,0 +1,19 @@
+FROM nba_player_game_logs_enhanced
+| WHERE season == "2025-26" AND game_result == "W"
+| STATS
+    wins_with_20_plus = COUNT(CASE(points >= 20, 1)),
+    wins_double_double = COUNT(CASE(double_double == true, 1)),
+    wins_triple_double = COUNT(CASE(triple_double == true, 1)),
+    total_wins = COUNT(),
+    avg_ppg_in_wins = AVG(points),
+    avg_apg_in_wins = AVG(assists)
+  BY player_name, team_abbreviation
+| EVAL clutch_factor = CASE(
+    wins_triple_double > 0, "Elite",
+    wins_double_double > total_wins * 0.5, "Very Good",
+    wins_with_20_plus > total_wins * 0.7, "Good",
+    "Average"
+  )
+| WHERE total_wins >= 5
+| KEEP player_name, team_abbreviation, total_wins, avg_ppg_in_wins, avg_apg_in_wins, clutch_factor
+| SORT avg_ppg_in_wins DESC

@@ -1,0 +1,17 @@
+FROM nba_player_season_stats
+| WHERE season_year_start == 2025 AND team_abbreviation == "SAS"
+| LOOKUP JOIN nba_players_enhanced ON player_id
+| EVAL contribution = CASE(
+    ppg >= 15, "Primary Scorer",
+    ppg >= 10, "Secondary Scorer",
+    ppg >= 5, "Role Player",
+    "Bench"
+  )
+| EVAL efficiency = CASE(
+    field_goal_pct > 50 AND three_point_pct > 35, "Elite",
+    field_goal_pct > 45 OR three_point_pct > 35, "Above Average",
+    "Average or Below"
+  )
+| KEEP player_name, position, ppg, rpg, apg, field_goal_pct,
+       contribution, efficiency, draft_year
+| SORT ppg DESC

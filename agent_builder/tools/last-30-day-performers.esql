@@ -1,0 +1,19 @@
+FROM nba_player_game_logs_enhanced
+| WHERE game_date >= NOW() - 30 days AND season == "2025-26"
+| STATS
+    recent_ppg = AVG(points),
+    recent_fg_pct = AVG(field_goal_pct),
+    hot_games = COUNT(CASE(points >= 20, 1)),
+    cold_games = COUNT(CASE(points < 10, 1)),
+    games_in_window = COUNT()
+  BY player_name, team_abbreviation
+| EVAL form_score = (recent_ppg / 25 * 0.4) + (recent_fg_pct / 50 * 0.3) + ((hot_games - cold_games) / games_in_window * 0.3)
+| EVAL form_category = CASE(
+    form_score > 0.7, "Hot",
+    form_score > 0.5, "Warm",
+    form_score > 0.3, "Neutral",
+    "Cold"
+  )
+| WHERE games_in_window >= 5
+| KEEP player_name, team_abbreviation, recent_ppg, recent_fg_pct, form_score, form_category
+| SORT form_score DESC

@@ -1,0 +1,17 @@
+FROM nba_games_enhanced
+| WHERE season == "2025-26"
+| STATS
+    home_games = COUNT(*),
+    home_wins = SUM(CASE(winner == "home", 1, 0)),
+    home_ppg = AVG(home_points),
+    home_ppg_against = AVG(away_points),
+    home_fg = AVG(home_field_goal_pct),
+    home_ast = AVG(home_assists),
+    home_to = AVG(home_turnovers)
+  BY home_team_abbreviation
+| EVAL
+    home_losses = home_games - home_wins,
+    home_net_rating = ROUND(home_ppg - home_ppg_against, 2),
+    home_fg_pct = ROUND(home_fg, 1)
+| KEEP home_team_abbreviation, home_games, home_wins, home_losses, home_ppg, home_ppg_against, home_net_rating, home_fg_pct
+| SORT home_wins DESC
