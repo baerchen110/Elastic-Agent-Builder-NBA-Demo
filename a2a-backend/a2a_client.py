@@ -54,7 +54,7 @@ class A2AClient:
                     }
                 }
             }
-
+            print(f"Preparing tp message to agent: {message}")
             response = await self.client.post(
                 self.agent_url,
                 json=payload,

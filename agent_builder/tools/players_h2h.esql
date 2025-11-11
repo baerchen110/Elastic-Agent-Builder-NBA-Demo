@@ -1,0 +1,28 @@
+FROM nba_player_season_stats
+| WHERE season_year_start == 2025 AND player_name IN (?player1, ?player2)
+| LOOKUP JOIN nba_players_enhanced ON player_id
+| EVAL position_comparison = CASE(
+    position == "PG" AND assists > 5, "Elite PG",
+    position == "SG" AND points > 20, "Elite SG",
+    position == "SF" AND (points + total_rebounds) > 25, "Elite SF",
+    position == "PF" AND total_rebounds > 8, "Elite PF",
+    position == "C" AND (total_rebounds + blocks) > 10, "Elite C",
+    CONCAT(position, " role")
+  )
+| EVAL age_context = CASE(
+    age <= 25, "Young Star",
+    age <= 30, "Prime",
+    age <= 35, "Veteran",
+    "Senior"
+  )
+| EVAL career_year = 2025 - draft_year
+| EVAL experience_impact = CASE(
+    career_year <= 2, "Emerging Talent",
+    career_year <= 5, "Rising Star",
+    career_year <= 10, "Peak Years",
+    "Veteran Presence"
+  )
+| KEEP player_name, position, draft_year, career_year, games_played,
+       points, assists, total_rebounds, field_goal_pct, three_point_pct,
+       position_comparison, age_context, experience_impact
+| SORT player_name ASC

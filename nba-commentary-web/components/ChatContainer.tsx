@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useChat } from '@/hooks/useChat';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
@@ -38,7 +39,13 @@ export default function ChatContainer() {
                     <div className="flex items-center justify-between">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
-                                <div className="text-4xl">🏀</div>
+                                <Image
+                                    src="https://upload.wikimedia.org/wikipedia/en/0/03/National_Basketball_Association_logo.svg"
+                                    alt="NBA Logo"
+                                    width={48}
+                                    height={48}
+                                    className="drop-shadow-lg"
+                                />
                                 <h1 className="text-4xl font-black text-white tracking-tight">
                                     NBA<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-cyan-300"> Commentary Companion</span>
                                 </h1>
@@ -79,13 +86,6 @@ export default function ChatContainer() {
                                         </div>
                                     </div>
                                 </div>
-
-                                <h2 className="text-3xl font-black text-white mb-3 tracking-tight">
-                                    Welcome to NBA<br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-cyan-300">
-                                        Commentary Companion
-                                    </span>
-                                </h2>
                                 <p className="text-gray-300 mb-8 leading-relaxed">
                                     Ask about player stats, game predictions, matchup analysis, and real-time insights powered by advanced AI and real NBA data.
                                 </p>
@@ -93,10 +93,14 @@ export default function ChatContainer() {
                                 {/* Quick Action Buttons */}
                                 <div className="grid grid-cols-2 gap-3 mb-8">
                                     {[
-                                        { icon: '📊', text: 'Top Scorers', query: 'Show me the top 10 scorers this season' },
-                                        { icon: '🎮', text: 'Live Games', query: 'What games are happening today?' },
-                                        { icon: '⚖️', text: 'Compare', query: 'Compare Nikola Jokić vs LeBron James 2024-25 season' },
-                                        { icon: '🔮', text: 'Predict', query: 'Predict the Lakers vs Celtics game outcome' },
+                                        { icon: '📊', text: 'Top players', query: 'Who are the hottest players in the NBA right now based on last 30 days of play? \n' +
+                                                'Show me players in "Hot" form and their recent scoring efficiency. \n' +
+                                                'Which teams have the most players in hot form?' },
+                                        { icon: '🎮', text: 'Games', query: 'What games are happening today?' },
+                                        { icon: '⚖️', text: 'Compare', query: 'I want to understand generational differences. \n' +
+                                                'Compare Victor Wembanyama and Stephen Curry. \n' +
+                                                'Show me their career stage classifications and how experience impact differs.' },
+                                        { icon: '🔮', text: 'Predict', query: 'Where do all NBA teams stand in the playoff race right now? Show me teams projected to finish in the top 4 seeds and their current playoff probability. Which teams are on the bubble?' },
                                     ].map((btn, i) => (
                                         <button
                                             key={i}

@@ -1,5 +1,5 @@
 FROM nba_player_season_stats
-| WHERE season_year_start == 2025 AND team_abbreviation == "SAS"
+| WHERE season_year_start == 2025 AND team_abbreviation == ?team
 | LOOKUP JOIN nba_players_enhanced ON player_id
 | EVAL contribution = CASE(
     ppg >= 15, "Primary Scorer",
