@@ -1,24 +1,37 @@
-name: New workflow
-enabled: false
+version: "1"
+name: HackathonNBA
+enabled: true
 triggers:
-    - type: manual
-inputs:
-  - name: agent_id
-    type: string
-    description: The ID of the agent to invoke
-    required: true
-  - name: question
-    type: string
-    description: The question or prompt to send to the subagent
-    required: true
+  - type: manual
+
 steps:
-  - name: converse_with_agent
+  - name: next-matchup
+    type: elasticsearch.search
+    with:
+      index: "nba-game-schedule"
+      query:
+        range:
+          "game_date":
+            "gte": "now/d"
+            "lt": "now+1d/d"
+  - name: converse_with_commentary_agent
     type: kibana.post_agent_builder_converse
     with:
-      agent_id: "{{ inputs.agent_id }}"
-      input: "{{ inputs.question }}"
+      agent_id: "nba_commentary_assitante"
+      input: "{{steps.next-matchup.output.hits.hits[0]._source.away_team_name}} vs. {{steps.next-matchup.output.hits.hits[0]._source.home_team_name}} Head-to-Head Analysis"
   - name: slack_step
     type: slack
     connector-id: test
     with:
-      message: "{{ steps.converse_with_agent.output.response.message }}"
+      message: "{{ steps.converse_with_commentary_agent.output.response.message }}"
+  
+  - name: converse_with_news_agent
+    type: kibana.post_agent_builder_converse
+    with:
+      agent_id: "nba_news_agent"
+      input: "{{steps.next-matchup.output.hits.hits[0]._source.away_team_name}} and {{steps.next-matchup.output.hits.hits[0]._source.home_team_name}} latest news"
+  - name: slack_step2
+    type: slack
+    connector-id: test
+    with:
+      message: "{{ steps.converse_with_news_agent.output.response.message }}"
