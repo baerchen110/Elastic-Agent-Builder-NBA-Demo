@@ -93,14 +93,16 @@ export default function ChatContainer() {
                                 {/* Quick Action Buttons */}
                                 <div className="grid grid-cols-2 gap-3 mb-8">
                                     {[
-                                        { icon: '📊', text: 'Top players', query: 'Who are the hottest players in the NBA right now based on last 30 days of play? \n' +
+                                        { icon: '⛹️', text: 'Hot players', query: 'Who are the hottest players in the NBA right now based on last 30 days of play? \n' +
                                                 'Show me players in "Hot" form and their recent scoring efficiency. \n' +
                                                 'Which teams have the most players in hot form?' },
-                                        { icon: '🎮', text: 'Games', query: 'What games are happening today?' },
+                                        { icon: '🏟️', text: 'Games', query: 'What games are happening today?' },
                                         { icon: '⚖️', text: 'Compare', query: 'I want to understand generational differences. \n' +
                                                 'Compare Victor Wembanyama and Stephen Curry. \n' +
                                                 'Show me their career stage classifications and how experience impact differs.' },
                                         { icon: '🔮', text: 'Predict', query: 'Where do all NBA teams stand in the playoff race right now? Show me teams projected to finish in the top 4 seeds and their current playoff probability. Which teams are on the bubble?' },
+                                        { icon: '🏆', text: 'Teams', query: 'Get the home performance statistics for all teams.\nWhich teams have the highest net rating at home?\nAre there teams winning at home but with lower net ratings?' },
+                                        { icon: '📋', text: 'Previews', query: 'Generate comprehensive game previews with commentary and team news for tonight\'s NBA matchups. Include key player matchups, injury updates, and analysis for each game.' },
                                     ].map((btn, i) => (
                                         <button
                                             key={i}
