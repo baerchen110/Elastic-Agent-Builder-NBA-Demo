@@ -87,7 +87,7 @@ def prepare_game_log_actions(df, player_name):
                 minutes = float(min_val)
 
         action = {
-            "_index": "nba-player-game-logs",
+            "_index": os.getenv('ES_INDEX_GAME_LOGS', 'nba-player-game-logs'),
             "_source": {
                 "player_id": str(row['Player_ID']),
                 "player_name": player_name,

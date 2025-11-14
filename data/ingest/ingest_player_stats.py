@@ -42,7 +42,7 @@ def prepare_bulk_actions(df, season='2024-25'):
 
     for _, row in df.iterrows():
         action = {
-            "_index": "nba-player-stats",
+            "_index": os.getenv('ES_INDEX_PLAYER_STATS', 'nba-player-stats'),
             "_source": {
                 "player_id": str(row['PLAYER_ID']),
                 "player_name": row['PLAYER_NAME'],

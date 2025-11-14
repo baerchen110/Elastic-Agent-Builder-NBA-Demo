@@ -47,8 +47,8 @@ export class MCPAggregator {
     this.nbaClient = new NBAMCPClient();
     this.sentimentClient = new SentimentMCPClient();
     this.cache = new MCPCache({
-      maxSize: 500,
-      ttl: 5 * 60 * 1000 // 5 minutes
+      maxSize: parseInt(process.env.MCP_CACHE_MAX_SIZE || '500', 10),
+      ttl: parseInt(process.env.MCP_CACHE_TTL_MS || '300000', 10)
     });
     this.startTime = Date.now();
 

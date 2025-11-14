@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 import os
 
 # Elasticsearch configuration
-INDEX_NAME = "nba-game-schedule"
+INDEX_NAME = os.getenv('ES_INDEX_GAME_SCHEDULE', 'nba-game-schedule')
 
 # NBA schedule API endpoint
-NBA_SCHEDULE_URL = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"
+NBA_SCHEDULE_URL = os.getenv('NBA_SCHEDULE_API_URL', 'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json')
 
 
 def create_index_with_mapping(es_client):

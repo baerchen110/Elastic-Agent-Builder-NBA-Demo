@@ -23,7 +23,7 @@ export class CodeExecutionError extends Error {
 }
 
 export class CodeExecutionEngine {
-  private readonly defaultTimeout = 2000;
+  private readonly defaultTimeout = parseInt(process.env.CODE_EXECUTOR_TIMEOUT_MS || '2000', 10);
 
   async execute(options: ExecutionOptions): Promise<QueryPlan> {
     const { code, request, toolsMap, timeoutMs } = options;

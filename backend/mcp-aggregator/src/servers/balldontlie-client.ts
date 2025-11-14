@@ -27,8 +27,9 @@ export class BallDontLieMCPClient {
 
       const apiKey = process.env.BALLDONTLIE_API_KEY;
 
-      // Path to the built MCP server
-      const serverPath = path.resolve(__dirname, '../../../../mcp-servers/balldontlie/dist/index.js');
+      // Path to the built MCP server (configurable via BALLDONTLIE_MCP_SERVER_PATH)
+      const serverPath = process.env.BALLDONTLIE_MCP_SERVER_PATH ||
+                         path.resolve(__dirname, '../../../../mcp-servers/balldontlie/dist/index.js');
 
       // Create stdio transport to local MCP server
       this.transport = new StdioClientTransport({

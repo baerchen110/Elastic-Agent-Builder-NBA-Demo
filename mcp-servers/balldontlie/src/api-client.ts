@@ -5,7 +5,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 
-const BASE_URL = 'https://api.balldontlie.io/v1';
+const BASE_URL = process.env.BALLDONTLIE_API_BASE_URL || 'https://api.balldontlie.io/v1';
 
 export interface Player {
   id: number;
@@ -79,7 +79,7 @@ export class BallDontLieAPI {
     this.client = axios.create({
       baseURL: BASE_URL,
       headers: apiKey ? { 'Authorization': apiKey } : {},
-      timeout: 10000
+      timeout: parseInt(process.env.BALLDONTLIE_API_TIMEOUT_MS || '10000', 10)
     });
   }
 
@@ -164,7 +164,7 @@ export class BallDontLieAPI {
   async getTeams(): Promise<Team[]> {
     try {
       const response = await this.client.get('/teams', {
-        params: { per_page: 100 }
+        params: { per_page: parseInt(process.env.BALLDONTLIE_TEAMS_PER_PAGE || '100', 10) }
       });
       return response.data.data || [];
     } catch (error: any) {

@@ -43,7 +43,7 @@ def index_live_game(game_data):
         }
 
         es.index(
-            index='nba-live-games',
+            index=os.getenv('ES_INDEX_LIVE_GAMES', 'nba-live-games'),
             id=game_data.get('gameId'),
             document=doc
         )
