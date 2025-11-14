@@ -43,7 +43,7 @@ def index_live_game(game_data):
         }
 
         es.index(
-            index='nba-live-games',
+            index=os.getenv('ES_INDEX_LIVE_GAMES', 'nba-live-games'),
             id=game_data.get('gameId'),
             document=doc
         )
@@ -54,8 +54,10 @@ def index_live_game(game_data):
         return False
 
 
-def stream_live_games(interval=30):
+def stream_live_games(interval=None):
     """Continuously stream live game updates"""
+    if interval is None:
+        interval = int(os.getenv('LIVE_GAMES_UPDATE_INTERVAL_SECONDS', '30'))
     print("Starting live game streaming...")
     print(f"Updating every {interval} seconds")
     print("Press Ctrl+C to stop\n")

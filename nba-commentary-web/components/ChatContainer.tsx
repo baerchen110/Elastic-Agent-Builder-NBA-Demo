@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useChat } from '@/hooks/useChat';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
@@ -103,20 +104,36 @@ export default function ChatContainer() {
                                         { icon: '🔮', text: 'Predict', query: 'Where do all NBA teams stand in the playoff race right now? Show me teams projected to finish in the top 4 seeds and their current playoff probability. Which teams are on the bubble?' },
                                         { icon: '🏆', text: 'Teams', query: 'Get the home performance statistics for all teams.\nWhich teams have the highest net rating at home?\nAre there teams winning at home but with lower net ratings?' },
                                         { icon: '📋', text: 'Previews', query: 'Generate comprehensive game previews with commentary and team news for tonight\'s NBA matchups. Include key player matchups, injury updates, and analysis for each game.' },
-                                    ].map((btn, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => sendMessage(btn.query)}
-                                            disabled={!isConnected}
-                                            className="group relative p-4 rounded-lg border border-blue-400/30 hover:border-blue-400/60 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 backdrop-blur-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
-                                        >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-cyan-500/0 group-hover:from-blue-500/10 group-hover:to-cyan-500/10 transition-all" />
-                                            <div className="relative">
-                                                <div className="text-2xl mb-1">{btn.icon}</div>
-                                                <div className="text-xs font-bold text-white">{btn.text}</div>
-                                            </div>
-                                        </button>
-                                    ))}
+                                        { icon: '🏀💬', text: 'Stats & Buzz', href: '/statsandbuzz/chat' },
+                                    ].map((btn, i) => {
+                                        if (btn.href) {
+                                            return (
+                                                <Link key={i} href={btn.href}>
+                                                    <div className="group relative p-4 rounded-lg border border-blue-400/30 hover:border-blue-400/60 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 backdrop-blur-md transition-all duration-300 overflow-hidden cursor-pointer h-full">
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-cyan-500/0 group-hover:from-blue-500/10 group-hover:to-cyan-500/10 transition-all" />
+                                                        <div className="relative">
+                                                            <div className="text-2xl mb-1">{btn.icon}</div>
+                                                            <div className="text-xs font-bold text-white">{btn.text}</div>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={i}
+                                                onClick={() => sendMessage(btn.query!)}
+                                                disabled={!isConnected}
+                                                className="group relative p-4 rounded-lg border border-blue-400/30 hover:border-blue-400/60 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 backdrop-blur-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-cyan-500/0 group-hover:from-blue-500/10 group-hover:to-cyan-500/10 transition-all" />
+                                                <div className="relative">
+                                                    <div className="text-2xl mb-1">{btn.icon}</div>
+                                                    <div className="text-xs font-bold text-white">{btn.text}</div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Info Cards */}

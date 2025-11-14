@@ -50,46 +50,46 @@ export default function MessageBubble({ message, isStreaming }: MessageBubblePro
             {message.content ? (
               <ReactMarkdown
                 components={{
-                  h1: ({ node, ...props }) => (
+                  h1: ({ ...props }) => (
                     <h1 className="text-lg font-bold mt-3 mb-2 text-blue-300" {...props} />
                   ),
-                  h2: ({ node, ...props }) => (
+                  h2: ({ ...props }) => (
                     <h2 className="text-base font-bold mt-2 mb-1 text-blue-200" {...props} />
                   ),
-                  h3: ({ node, ...props }) => (
+                  h3: ({ ...props }) => (
                     <h3 className="text-sm font-bold mt-2 mb-1 text-blue-100" {...props} />
                   ),
-                  p: ({ node, ...props }) => (
+                  p: ({ ...props }) => (
                     <p className="mb-2" {...props} />
                   ),
-                  ul: ({ node, ...props }) => (
+                  ul: ({ ...props }) => (
                     <ul className="list-disc list-inside mb-2 space-y-1" {...props} />
                   ),
-                  ol: ({ node, ...props }) => (
+                  ol: ({ ...props }) => (
                     <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />
                   ),
-                  li: ({ node, ...props }) => (
+                  li: ({ ...props }) => (
                     <li className="text-sm" {...props} />
                   ),
-                  strong: ({ node, ...props }) => (
+                  strong: ({ ...props }) => (
                     <strong className="font-bold text-blue-200" {...props} />
                   ),
-                  em: ({ node, ...props }) => (
+                  em: ({ ...props }) => (
                     <em className="italic text-blue-100" {...props} />
                   ),
-                  code: ({ node, ...props }) => (
+                  code: ({ ...props }) => (
                     <code className="bg-black/30 px-2 py-1 rounded text-xs font-mono" {...props} />
                   ),
-                  blockquote: ({ node, ...props }) => (
+                  blockquote: ({ ...props }) => (
                     <blockquote className="border-l-4 border-blue-400 pl-3 italic my-2" {...props} />
                   ),
-                  table: ({ node, ...props }) => (
+                  table: ({ ...props }) => (
                     <table className="w-full border-collapse my-2" {...props} />
                   ),
-                  th: ({ node, ...props }) => (
+                  th: ({ ...props }) => (
                     <th className="border border-gray-500 px-2 py-1 text-left" {...props} />
                   ),
-                  td: ({ node, ...props }) => (
+                  td: ({ ...props }) => (
                     <td className="border border-gray-500 px-2 py-1" {...props} />
                   ),
                 }}
