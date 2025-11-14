@@ -76,7 +76,7 @@ def bulk_index_data(actions):
         success, failed = helpers.bulk(
             es,
             actions,
-            chunk_size=500,
+            chunk_size=int(os.getenv('ES_BULK_CHUNK_SIZE_PLAYER_STATS', '500')),
             request_timeout=30
         )
         print(f"✓ Successfully indexed {success} documents")

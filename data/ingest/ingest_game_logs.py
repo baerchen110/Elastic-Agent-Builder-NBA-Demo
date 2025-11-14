@@ -141,7 +141,7 @@ def main():
             success, failed = helpers.bulk(
                 es,
                 all_actions,
-                chunk_size=500,
+                chunk_size=int(os.getenv('ES_BULK_CHUNK_SIZE_GAME_LOGS', '500')),
                 raise_on_error=False  # Don't raise exception, capture failed docs
             )
 

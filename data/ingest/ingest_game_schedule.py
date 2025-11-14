@@ -152,7 +152,7 @@ def index_games_to_elasticsearch(es_client, documents):
         success_count, error_list = bulk(
             es_client,
             documents,
-            chunk_size=100,
+            chunk_size=int(os.getenv('ES_BULK_CHUNK_SIZE', '100')),
             raise_on_error=False
         )
 
