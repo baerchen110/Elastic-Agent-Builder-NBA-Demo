@@ -89,9 +89,9 @@ export class LLMAdvancedRouter {
       const { systemPrompt, userPrompt } = this.buildPrompt(request, toolInventory);
 
       const response = await this.anthropic!.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1800,
-        temperature: 0.3,
+        model: process.env.LLM_ADVANCED_ROUTER_MODEL || 'claude-sonnet-4-20250514',
+        max_tokens: parseInt(process.env.LLM_ADVANCED_ROUTER_MAX_TOKENS || '1800', 10),
+        temperature: parseFloat(process.env.LLM_ADVANCED_ROUTER_TEMPERATURE || '0.3'),
         system: systemPrompt,
         messages: [
           {

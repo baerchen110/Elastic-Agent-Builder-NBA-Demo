@@ -129,8 +129,8 @@ export class LLMRouter {
       const compositionGuidance = this.buildCompositionGuidance();
 
       const response = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        model: process.env.LLM_ROUTER_MODEL || 'claude-sonnet-4-20250514',
+        max_tokens: parseInt(process.env.LLM_ROUTER_MAX_TOKENS || '2000', 10),
         messages: [{
           role: 'user',
           content: `You are an expert query router for an NBA data system. Your job is to analyze queries and select the RIGHT tools to answer them.

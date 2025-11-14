@@ -5,6 +5,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
+const MAX_ARRAY_ITEMS = parseInt(process.env.LLM_SUMMARIZER_MAX_ARRAY_ITEMS || '5', 10);
+
 export interface SummarizationInput {
   query: string;
   intent: string;
@@ -83,15 +85,16 @@ export async function summarizeResults(input: SummarizationInput): Promise<Summa
     const anthropic = new Anthropic({ apiKey });
 
     // Truncate very large results to avoid token limits
+    const maxResultLength = parseInt(process.env.LLM_SUMMARIZER_MAX_RESULT_LENGTH || '8000', 10);
     const truncatedInput = {
       ...input,
-      results: truncateResults(input.results, 8000)
+      results: truncateResults(input.results, maxResultLength)
     };
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      temperature: 0.7,
+      model: process.env.LLM_SUMMARIZER_MODEL || 'claude-sonnet-4-20250514',
+      max_tokens: parseInt(process.env.LLM_SUMMARIZER_MAX_TOKENS || '2000', 10),
+      temperature: parseFloat(process.env.LLM_SUMMARIZER_TEMPERATURE || '0.7'),
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -136,8 +139,8 @@ function truncateResults(results: any, maxLength: number): any {
 
   // Try to intelligently truncate
   if (Array.isArray(results)) {
-    // Keep first 5 items of arrays
-    return results.slice(0, 5).map(item => truncateResults(item, Math.floor(maxLength / 5)));
+    // Keep first N items of arrays (configurable via LLM_SUMMARIZER_MAX_ARRAY_ITEMS)
+    return results.slice(0, MAX_ARRAY_ITEMS).map(item => truncateResults(item, Math.floor(maxLength / MAX_ARRAY_ITEMS)));
   }
 
   if (typeof results === 'object' && results !== null) {

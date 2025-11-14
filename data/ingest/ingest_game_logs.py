@@ -39,10 +39,13 @@ def parse_game_date(date_str):
         return datetime.now(timezone.utc).isoformat()
 
 
-def fetch_player_game_log(player_id, player_name, season='2024-25'):
+def fetch_player_game_log(player_id, player_name, season=None):
     """Fetch game log for a specific player"""
+    if season is None:
+        season = os.getenv('NBA_CURRENT_SEASON', '2024-25')
+
     try:
-        print(f"Fetching game logs for {player_name}...")
+        print(f"Fetching game logs for {player_name} (season: {season})...")
         game_log = playergamelog.PlayerGameLog(
             player_id=player_id,
             season=season,
