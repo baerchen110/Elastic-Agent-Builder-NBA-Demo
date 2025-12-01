@@ -37,12 +37,12 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-4. Edit `.env` file with your cluster credentials and agent name:
+4. Edit `.env` file with your cluster credentials and agent ID:
 ```bash
 # Source cluster configuration
 SOURCE_KIBANA_URL=https://your-source-kibana.elastic.co
 SOURCE_API_KEY=your-source-api-key
-AGENT_NAME=nba_commentary_assitante
+AGENT_ID=your-agent-id
 
 # Target cluster configuration
 TARGET_KIBANA_URL=https://your-target-kibana.elastic.co
@@ -77,7 +77,7 @@ Environment variables in `.env`:
 |----------|----------|---------|-------------|
 | `SOURCE_KIBANA_URL` | Yes | - | Source Kibana URL |
 | `SOURCE_API_KEY` | Yes | - | Source cluster API key |
-| `AGENT_NAME` | Yes | - | Name of agent to migrate |
+| `AGENT_ID` | Yes | - | ID of agent to migrate |
 | `TARGET_KIBANA_URL` | Yes | - | Target Kibana URL |
 | `TARGET_API_KEY` | Yes | - | Target cluster API key |
 | `SKIP_PLATFORM_TOOLS` | No | true | Skip platform tools during migration |
@@ -104,7 +104,7 @@ Agent Builder Migration Tool
 ================================================================================
 Source: https://source-kibana.elastic.co
 Target: https://target-kibana.elastic.co
-Agent: nba_commentary_assitante
+Agent ID: agent-123
 Skip Platform Tools: True
 ================================================================================
 
@@ -113,7 +113,6 @@ Initializing clients...
 ================================================================================
 STEP 1: Retrieving agent from source cluster
 ================================================================================
-Searching for agent: nba_commentary_assitante
 Found agent: nba_commentary_assitante (ID: agent-123)
 
 ================================================================================
@@ -205,7 +204,7 @@ If you receive authentication errors:
 ### Agent Not Found
 
 If the agent is not found:
-- Verify the `AGENT_NAME` in `.env` matches exactly (case-sensitive)
+- Verify the `AGENT_ID` in `.env` is correct
 - Check that the agent exists in the source cluster
 - Ensure your API key has permission to access the agent
 

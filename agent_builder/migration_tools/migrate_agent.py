@@ -11,7 +11,7 @@ Usage:
 Configuration is loaded from .env file with the following variables:
     - SOURCE_KIBANA_URL: Source Kibana URL
     - SOURCE_API_KEY: Source API key
-    - AGENT_NAME: Name of the agent to migrate
+    - AGENT_ID: ID of the agent to migrate
     - TARGET_KIBANA_URL: Target Kibana URL
     - TARGET_API_KEY: Target API key
     - SKIP_PLATFORM_TOOLS: Skip platform tools (default: true)
@@ -62,7 +62,7 @@ def load_config() -> Dict[str, Any]:
     required_vars = [
         'SOURCE_KIBANA_URL',
         'SOURCE_API_KEY',
-        'AGENT_NAME',
+        'AGENT_ID',
         'TARGET_KIBANA_URL',
         'TARGET_API_KEY'
     ]
@@ -77,7 +77,7 @@ def load_config() -> Dict[str, Any]:
     return {
         'source_kibana_url': os.getenv('SOURCE_KIBANA_URL'),
         'source_api_key': os.getenv('SOURCE_API_KEY'),
-        'agent_name': os.getenv('AGENT_NAME'),
+        'agent_id': os.getenv('AGENT_ID'),
         'target_kibana_url': os.getenv('TARGET_KIBANA_URL'),
         'target_api_key': os.getenv('TARGET_API_KEY'),
         'skip_platform_tools': os.getenv('SKIP_PLATFORM_TOOLS', 'true').lower() == 'true',
@@ -233,7 +233,7 @@ def main():
         logger.info("=" * 80)
         logger.info(f"Source: {config['source_kibana_url']}")
         logger.info(f"Target: {config['target_kibana_url']}")
-        logger.info(f"Agent: {config['agent_name']}")
+        logger.info(f"Agent ID: {config['agent_id']}")
         logger.info(f"Skip Platform Tools: {config['skip_platform_tools']}")
         logger.info("=" * 80)
 
@@ -256,12 +256,9 @@ def main():
             logger.info("STEP 1: Retrieving agent from source cluster")
             logger.info("=" * 80)
 
-            source_agent = source_client.get_agent_by_name(config['agent_name'])
-            if not source_agent:
-                raise ValueError(f"Agent not found: {config['agent_name']}")
-
-            agent_id = source_agent.get('id')
-            logger.info(f"Found agent: {config['agent_name']} (ID: {agent_id})")
+            source_agent = source_client.get_agent_by_id(config['agent_id'])
+            agent_name = source_agent.get('name', 'Unknown')
+            logger.info(f"Found agent: {agent_name} (ID: {config['agent_id']})")
 
             # Step 2: Get tools from source cluster
             logger.info("\n" + "=" * 80)
@@ -269,7 +266,7 @@ def main():
             logger.info("=" * 80)
 
             source_tools = source_client.get_agent_tools(
-                agent_id,
+                config['agent_id'],
                 skip_platform_tools=config['skip_platform_tools']
             )
 
