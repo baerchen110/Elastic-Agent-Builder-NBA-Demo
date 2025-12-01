@@ -121,9 +121,10 @@ def sanitize_agent_for_creation(agent: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Sanitized agent dictionary
     """
-    # Fields to remove (timestamp and audit fields only)
+    # Fields to remove (timestamp, audit fields, and incompatible fields)
     # NOTE: We keep 'id' because it may be required by the API
-    fields_to_remove = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    # 'type' and 'readonly' are removed as they may not be supported in all cluster versions
+    fields_to_remove = ['created_at', 'updated_at', 'created_by', 'updated_by', 'type', 'readonly']
 
     sanitized = {k: v for k, v in agent.items() if k not in fields_to_remove}
     return sanitized
@@ -182,15 +183,17 @@ def migrate_tools(
                         # Use the same ID since it already exists
                         tool_id_mapping[source_tool_id] = source_tool_id
                     else:
-                        logger.error(f"  ✗ Failed to create tool {tool_name}: {response_body}")
-                        raise
+                        logger.warning(f"  ⚠  Skipping tool {tool_name}: {response_body}")
+                        # Don't add to mapping - tool won't be available in target agent
+                        continue
                 else:
                     raise
 
         except Exception as e:
             logger.error(f"  ✗ Failed to migrate tool {tool_name}: {e}")
             logger.debug(f"Tool config that failed: {tool_config}")
-            raise
+            # Continue with next tool instead of stopping entire migration
+            continue
 
     return tool_id_mapping
 
@@ -221,27 +224,47 @@ def migrate_agent(
         agent_config = sanitize_agent_for_creation(source_agent)
 
         # Update tool references to use new tool IDs
-        if 'tools' in agent_config and agent_config['tools']:
-            original_tool_ids = agent_config['tools']
+        # Tool IDs are nested in configuration.tools[0].tool_ids
+        configuration = agent_config.get('configuration', {})
+        tools_config = configuration.get('tools', [])
+
+        if tools_config and len(tools_config) > 0 and 'tool_ids' in tools_config[0]:
+            original_tool_ids = tools_config[0]['tool_ids']
+            # Only include tools that were successfully migrated (in tool_id_mapping)
             updated_tool_ids = [
                 tool_id_mapping.get(tool_id, tool_id)
                 for tool_id in original_tool_ids
+                if tool_id in tool_id_mapping
             ]
-            agent_config['tools'] = updated_tool_ids
+            tools_config[0]['tool_ids'] = updated_tool_ids
+
+            skipped_count = len(original_tool_ids) - len(updated_tool_ids)
+            if skipped_count > 0:
+                logger.warning(
+                    f"  ⚠  Removed {skipped_count} tool reference(s) that failed to migrate"
+                )
 
             logger.info(
                 f"  Updated {len(updated_tool_ids)} tool reference(s) in agent configuration"
             )
 
         # Create agent on target cluster
-        created_agent = target_client.create_agent(agent_config)
+        try:
+            created_agent = target_client.create_agent(agent_config)
 
-        logger.info(
-            f"  ✓ Successfully created agent: {agent_name} "
-            f"(ID: {created_agent.get('id')})"
-        )
+            logger.info(
+                f"  ✓ Successfully created agent: {agent_name} "
+                f"(ID: {created_agent.get('id')})"
+            )
 
-        return created_agent
+            return created_agent
+
+        except httpx.HTTPStatusError as create_error:
+            # Log the detailed error response
+            if create_error.response.status_code == 400:
+                response_body = create_error.response.text
+                logger.error(f"  ✗ Failed to create agent: {response_body}")
+            raise
 
     except Exception as e:
         logger.error(f"  ✗ Failed to migrate agent {agent_name}: {e}")
