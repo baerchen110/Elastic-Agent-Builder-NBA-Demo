@@ -73,6 +73,12 @@ class AgentBuilderClient:
         self.logger.debug(f"{method} {url}")
 
         response = self.client.request(method, url, **kwargs)
+
+        # Log error details for debugging (only for non-400 errors or log at debug level)
+        if response.status_code >= 400:
+            self.logger.debug(f"Request failed with status {response.status_code}")
+            self.logger.debug(f"Response body: {response.text}")
+
         response.raise_for_status()
 
         return response.json() if response.text else {}

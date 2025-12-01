@@ -24,6 +24,7 @@ import logging
 from typing import Dict, List, Any
 from dotenv import load_dotenv
 from agent_builder_client import AgentBuilderClient
+import httpx
 
 
 def setup_logging(log_level: str = 'INFO') -> logging.Logger:
@@ -90,14 +91,19 @@ def sanitize_tool_for_creation(tool: Dict[str, Any]) -> Dict[str, Any]:
     """
     Remove fields that shouldn't be included when creating a tool.
 
+    Note: In Elasticsearch Agent Builder, tools use their ID as the primary identifier,
+    so we KEEP the id field but remove timestamp/audit fields.
+
     Args:
         tool: Original tool dictionary
 
     Returns:
         Sanitized tool dictionary
     """
-    # Fields to remove (typically auto-generated or read-only)
-    fields_to_remove = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by']
+    # Fields to remove (timestamp, audit fields, and fields that may not be compatible across versions)
+    # NOTE: We keep 'id' because it's required by the API
+    # readonly and schema are removed as they may not be supported in all cluster versions
+    fields_to_remove = ['created_at', 'updated_at', 'created_by', 'updated_by', 'readonly', 'schema']
 
     sanitized = {k: v for k, v in tool.items() if k not in fields_to_remove}
     return sanitized
@@ -107,14 +113,17 @@ def sanitize_agent_for_creation(agent: Dict[str, Any]) -> Dict[str, Any]:
     """
     Remove fields that shouldn't be included when creating an agent.
 
+    Note: We keep the 'id' field as agents also use their ID as identifier.
+
     Args:
         agent: Original agent dictionary
 
     Returns:
         Sanitized agent dictionary
     """
-    # Fields to remove (typically auto-generated or read-only)
-    fields_to_remove = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by']
+    # Fields to remove (timestamp and audit fields only)
+    # NOTE: We keep 'id' because it may be required by the API
+    fields_to_remove = ['created_at', 'updated_at', 'created_by', 'updated_by']
 
     sanitized = {k: v for k, v in agent.items() if k not in fields_to_remove}
     return sanitized
@@ -141,28 +150,45 @@ def migrate_tools(
     logger.info(f"Migrating {len(source_tools)} tool(s) to target cluster")
 
     for i, source_tool in enumerate(source_tools, 1):
-        tool_name = source_tool.get('name', 'Unknown')
+        tool_name = source_tool.get('name') or source_tool.get('id', 'Unknown')
         source_tool_id = source_tool.get('id')
 
         try:
-            logger.info(f"[{i}/{len(source_tools)}] Migrating tool: {tool_name}")
+            logger.info(f"[{i}/{len(source_tools)}] Migrating tool: {tool_name} (ID: {source_tool_id})")
+            logger.debug(f"Source tool data: {source_tool}")
 
             # Sanitize tool configuration
             tool_config = sanitize_tool_for_creation(source_tool)
+            logger.debug(f"Sanitized tool config: {tool_config}")
 
-            # Create tool on target cluster
-            created_tool = target_client.create_tool(tool_config)
-            target_tool_id = created_tool.get('id')
+            # Try to create tool on target cluster
+            try:
+                created_tool = target_client.create_tool(tool_config)
+                target_tool_id = created_tool.get('id')
 
-            tool_id_mapping[source_tool_id] = target_tool_id
+                tool_id_mapping[source_tool_id] = target_tool_id
 
-            logger.info(
-                f"  ✓ Successfully created tool: {tool_name} "
-                f"(Source ID: {source_tool_id}, Target ID: {target_tool_id})"
-            )
+                logger.info(
+                    f"  ✓ Successfully created tool: {tool_name} "
+                    f"(Source ID: {source_tool_id}, Target ID: {target_tool_id})"
+                )
+
+            except httpx.HTTPStatusError as create_error:
+                # Check if tool already exists
+                if create_error.response.status_code == 400:
+                    response_body = create_error.response.text
+                    if "already exists" in response_body:
+                        logger.info(f"  ⚠  Tool already exists: {tool_name} (ID: {source_tool_id})")
+                        # Use the same ID since it already exists
+                        tool_id_mapping[source_tool_id] = source_tool_id
+                    else:
+                        raise
+                else:
+                    raise
 
         except Exception as e:
             logger.error(f"  ✗ Failed to migrate tool {tool_name}: {e}")
+            logger.debug(f"Tool config that failed: {tool_config}")
             raise
 
     return tool_id_mapping
