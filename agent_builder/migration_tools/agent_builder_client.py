@@ -238,18 +238,27 @@ class AgentBuilderClient:
         """
         Get all tools associated with an agent, optionally excluding platform tools.
 
-        Note: The agent definition contains a 'tools' field with a list of tool IDs.
+        Note: The agent definition has tool IDs nested in configuration.tools[0].tool_ids.
+        Example: agent['configuration']['tools'][0]['tool_ids'] = ['tool-1', 'tool-2']
         This method fetches each tool's full definition using GET /api/agent_builder/tools/{id}.
 
         Args:
-            agent: Agent dictionary (must contain 'id' and 'tools' fields)
-            skip_platform_tools: If True, exclude platform tools
+            agent: Agent dictionary (must contain 'id' and nested 'configuration.tools' structure)
+            skip_platform_tools: If True, exclude platform tools (type starts with 'platform.')
 
         Returns:
             List of tool dictionaries
         """
         agent_id = agent.get('id')
-        tool_ids = agent.get('tools', [])
+
+        # Extract tool IDs from nested configuration structure
+        # Path: configuration.tools[0].tool_ids
+        tool_ids = []
+        configuration = agent.get('configuration', {})
+        tools_config = configuration.get('tools', [])
+
+        if tools_config and len(tools_config) > 0:
+            tool_ids = tools_config[0].get('tool_ids', [])
 
         self.logger.info(f"Getting tools for agent: {agent_id}")
 
@@ -264,14 +273,15 @@ class AgentBuilderClient:
         for tool_id in tool_ids:
             try:
                 self.logger.debug(f"Fetching tool: {tool_id}")
-                tool = self.get_tool_by_id(tool_id)
 
-                # Filter out platform tools if requested
-                if skip_platform_tools and tool.get('type') == 'platform':
-                    self.logger.debug(f"Skipping platform tool: {tool.get('name')}")
+                # Check if this is a platform tool by ID prefix
+                if skip_platform_tools and tool_id.startswith('platform.'):
+                    self.logger.debug(f"Skipping platform tool: {tool_id}")
                     continue
 
+                tool = self.get_tool_by_id(tool_id)
                 tools.append(tool)
+
             except Exception as e:
                 self.logger.error(f"Error fetching tool {tool_id}: {e}")
 

@@ -182,6 +182,7 @@ def migrate_tools(
                         # Use the same ID since it already exists
                         tool_id_mapping[source_tool_id] = source_tool_id
                     else:
+                        logger.error(f"  ✗ Failed to create tool {tool_name}: {response_body}")
                         raise
                 else:
                     raise
