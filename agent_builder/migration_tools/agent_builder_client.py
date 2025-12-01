@@ -226,33 +226,38 @@ class AgentBuilderClient:
 
     def get_agent_tools(
         self,
-        agent_id: str,
+        agent: Dict[str, Any],
         skip_platform_tools: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Get all tools associated with an agent, optionally excluding platform tools.
 
+        Note: The agent definition contains a 'tools' field with a list of tool IDs.
+        This method fetches each tool's full definition using GET /api/agent_builder/tools/{id}.
+
         Args:
-            agent_id: Agent identifier
+            agent: Agent dictionary (must contain 'id' and 'tools' fields)
             skip_platform_tools: If True, exclude platform tools
 
         Returns:
             List of tool dictionaries
         """
-        self.logger.info(f"Getting tools for agent: {agent_id}")
-
-        # Get agent details to find associated tools
-        agent = self.get_agent_by_id(agent_id)
+        agent_id = agent.get('id')
         tool_ids = agent.get('tools', [])
+
+        self.logger.info(f"Getting tools for agent: {agent_id}")
 
         if not tool_ids:
             self.logger.info(f"No tools found for agent: {agent_id}")
             return []
 
-        # Fetch each tool's details
+        self.logger.info(f"Agent has {len(tool_ids)} tool reference(s)")
+
+        # Fetch each tool's details by ID
         tools = []
         for tool_id in tool_ids:
             try:
+                self.logger.debug(f"Fetching tool: {tool_id}")
                 tool = self.get_tool_by_id(tool_id)
 
                 # Filter out platform tools if requested
@@ -265,7 +270,7 @@ class AgentBuilderClient:
                 self.logger.error(f"Error fetching tool {tool_id}: {e}")
 
         self.logger.info(
-            f"Found {len(tools)} tool(s) for agent {agent_id} "
+            f"Retrieved {len(tools)} tool(s) for agent {agent_id} "
             f"(platform tools {'excluded' if skip_platform_tools else 'included'})"
         )
         return tools

@@ -168,11 +168,15 @@ client = AgentBuilderClient(
 # List all agents
 agents = client.list_agents()
 
-# Get agent by name
+# Get agent by ID
+agent = client.get_agent_by_id('agent-123')
+
+# Get agent by name (client-side filtering)
 agent = client.get_agent_by_name('my-agent')
 
 # Get tools for an agent (excluding platform tools)
-tools = client.get_agent_tools(agent['id'], skip_platform_tools=True)
+# Note: Pass the full agent object, not just the ID
+tools = client.get_agent_tools(agent, skip_platform_tools=True)
 
 # Create a tool
 new_tool = client.create_tool({

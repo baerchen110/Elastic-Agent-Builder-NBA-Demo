@@ -266,7 +266,7 @@ def main():
             logger.info("=" * 80)
 
             source_tools = source_client.get_agent_tools(
-                config['agent_id'],
+                source_agent,
                 skip_platform_tools=config['skip_platform_tools']
             )
 
