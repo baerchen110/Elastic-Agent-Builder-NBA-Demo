@@ -85,3 +85,8 @@ backend/**/.env.local
 
 # Manual test scripts (development only)
 **/scripts/manual-tests/
+
+# Local documentation files (not tracked in git)
+*.md
+!README.md
+!**/README.md

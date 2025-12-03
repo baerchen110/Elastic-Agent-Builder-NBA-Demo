@@ -37,49 +37,109 @@ export default function StatsAndBuzzChatPage() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
+    // Add placeholder assistant message for streaming
+    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      status: 'sent',
+      tools_used: []
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+
     try {
-      // Call MCP API
-      const response = await fetch('/api/mcp/query', {
+      // Use MCP Aggregator streaming endpoint directly
+      const aggregatorUrl = process.env.NEXT_PUBLIC_MCP_AGGREGATOR_URL || 'http://localhost:3003';
+      const response = await fetch(`${aggregatorUrl}/api/query/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: content,
-          summarize: true
+          query: content
         }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to get response');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Create assistant message from response
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: result.data.summary || formatResults(result.data.results),
-        timestamp: new Date().toISOString(),
-        status: 'sent',
-        tools_used: result.data.toolsUsed || []
-      };
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // Read streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          setIsLoading(false);
+          break;
+        }
+
+        // Decode chunk
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE messages
+        const lines = buffer.split('\n');
+        buffer = lines[lines.length - 1]; // Keep incomplete line
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i];
+
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.substring(6));
+
+              if (data.type === 'chunk') {
+                // Update message content with streaming text
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: data.fullContent }
+                    : msg
+                ));
+              } else if (data.type === 'metadata') {
+                // Update tools used
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, tools_used: data.toolsUsed || [] }
+                    : msg
+                ));
+              } else if (data.type === 'complete') {
+                // Streaming complete
+                setIsLoading(false);
+              } else if (data.type === 'error') {
+                throw new Error(data.content);
+              }
+
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
+
     } catch (error) {
       console.error('Error sending message:', error);
+      setIsLoading(false);
 
-      // Add error message
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-        timestamp: new Date().toISOString(),
-        status: 'error'
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
+      // Update assistant message with error
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? {
+              ...msg,
+              content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+              status: 'error' as const
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
