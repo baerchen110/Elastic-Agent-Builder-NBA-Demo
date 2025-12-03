@@ -57,34 +57,55 @@ npm install
 
 ## 🔐 Environment Variables
 
-Create (or extend) a `.env.local` at the repo root or export the variables before running any MCP services.
+The project uses **43 environment variables** across all components for maximum configurability. All variables have sensible defaults for development.
+
+### Quick Setup
+
+Copy the example file and customize:
+```bash
+cp .env.local.example .env.local
+# Edit .env.local with your actual credentials
+```
+
+### Critical Variables (Required for Production)
 
 ```bash
 # Elastic / Kibana
 ELASTICSEARCH_URL=https://your-elastic.es.cloud
 ELASTICSEARCH_API_KEY=<elastic-api-key>
 KIBANA_URL=https://your-kibana.elastic.cloud
+AGENT_ID=nba_commentary_assitante
 
-# MCP Feature Flags
+# Frontend WebSocket (CRITICAL - must match deployed backend)
+NEXT_PUBLIC_WS_URL=ws://localhost:3001
+
+# Anthropic Claude API
+ANTHROPIC_API_KEY=<your-anthropic-api-key>
+
+# Azure OpenAI (for a2a-backend)
+AZURE_OPENAI_API_KEY=<azure-openai-key>
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT_NAME=<deployment-name>
+AZURE_OPENAI_API_VERSION=2024-08-01-preview
+
+# Elastic Agent Builder A2A Protocol
+ELASTIC_STATS_AGENT_URL=https://your-kibana.elastic.co/api/agent_builder/agents/stats-agent-id/converse
+ELASTIC_MEDIA_AGENT_URL=https://your-kibana.elastic.co/api/agent_builder/agents/media-agent-id/converse
+ELASTIC_API_KEY=<elastic-api-key>
+```
+
+### Feature Flags
+
+```bash
 USE_NBA_MCP_SERVER=true          # switch between NBA Python server and BallDontLie MCP
 USE_LLM_ROUTER=true              # enable Claude-powered classic router
 USE_LLM_ADVANCED_ROUTER=false    # enable experimental advanced router
 USE_SENTIMENT_MCP_SERVER=true    # turns on the sentiment MCP client + routing rules
-
-# Sentiment MCP tokens (optional but recommended)
-TWITTER_SENTIMENT_SERVICE=true   # set to false to disable Twitter and use Reddit only
-TWITTER_BEARER_TOKEN=<twitter-token>
-REDDIT_CLIENT_ID=<reddit-client-id>
-REDDIT_CLIENT_SECRET=<reddit-client-secret>
-REDDIT_USERNAME=<reddit-username>
-REDDIT_PASSWORD=<reddit-password>
-REDDIT_APP_NAME=<reddit-app-name>
-SENTIMENT_WINDOW_MINUTES=180     # default lookback window
-SENTIMENT_MAX_SAMPLES=50         # per-source sample cap
-
-# BallDontLie (fallback server)
-BALLDONTLIE_API_KEY=<balldontlie-token>
 ```
+
+### Optional Variables
+
+For sentiment analysis, NBA data enhancements, and performance tuning, see the complete list in `.env.local.example` which documents all 43 variables organized by component with priority levels (CRITICAL/HIGH/MEDIUM/LOW).
 
 ## 🛠️ Running the Stack
 
@@ -181,6 +202,162 @@ Use `GET /api/mcp/health` (Next.js API) to verify cache stats and connection sta
 | Sentiment tools tagged as `degraded` | Missing social API credentials | Provide Twitter/Reddit tokens or accept fallback behaviour |
 | `Tool ... not available` guardrail warning | Router planned tool not in tool map | Re-run aggregator init after server rebuild (`clearCache`, restart) |
 | Scratchpad execution errors | Advanced router experimental mode without Anthropic key | Disable `USE_LLM_ADVANCED_ROUTER` or set `ANTHROPIC_API_KEY` |
+
+## 📁 Project Structure
+
+```
+Elastic-Agent-Builder-NBA-Demo/
+├── backend/
+│   └── mcp-aggregator/          # Multi-MCP orchestration layer
+│       ├── src/
+│       │   ├── index.ts         # Main aggregator with caching
+│       │   ├── router.ts        # Static query routing
+│       │   ├── llm-router.ts    # Claude-powered routing
+│       │   ├── llm-advanced-router.ts  # Experimental scratchpad router
+│       │   ├── servers/         # MCP client implementations
+│       │   └── code-execution/  # Sandboxed code execution
+│       └── tests/               # Unit tests
+│
+├── mcp-servers/
+│   ├── balldontlie/             # BallDontLie NBA API MCP server
+│   ├── sentiment/               # Twitter/Reddit sentiment MCP server
+│   └── nba-mcp-server/          # Python NBA MCP server (legacy)
+│
+├── nba-commentary-web/          # Next.js frontend
+│   ├── app/                     # Next.js 13+ app directory
+│   ├── components/              # React components
+│   ├── hooks/                   # Custom React hooks
+│   ├── lib/                     # Utility functions
+│   ├── pages/                   # API routes and special pages
+│   │   ├── api/mcp/             # MCP aggregator API endpoints
+│   │   ├── sentiment-test.tsx   # Sentiment testing UI
+│   │   └── statsandbuzz/        # Stats & Buzz feature
+│   └── nba-backend/             # Express WebSocket server
+│
+├── data/ingest/                 # Python data ingestion scripts
+│   ├── create_indexes.py        # Elasticsearch index creation
+│   ├── ingest_player_stats.py   # Season statistics ingestion
+│   ├── ingest_game_logs.py      # Game-by-game logs ingestion
+│   ├── ingest_game_schedule.py  # Schedule data ingestion
+│   └── stream_live_games.py     # Real-time game score streaming
+│
+├── a2a-backend/                 # Python FastAPI agent-to-agent backend
+│   └── supervisor.py            # Multi-agent orchestration
+│
+└── .env.local.example           # Complete environment variable reference
+```
+
+## ✨ Features
+
+### Stats & Buzz
+
+Interactive multi-server query interface combining real-time data with sentiment analysis:
+
+- **Location:** `/statsandbuzz/chat`
+- **Features:**
+  - Natural language queries across Elasticsearch, BallDontLie, and Sentiment MCPs
+  - Intelligent LLM-powered routing to appropriate data sources
+  - Real-time sentiment analysis from Twitter and Reddit
+  - Cached responses for improved performance
+  - Query history and context preservation
+
+**Quick Actions:**
+- Hot players analysis (form, efficiency, team distribution)
+- Game schedules and live scores
+- Player comparisons with career stage context
+- Playoff race predictions
+- Team performance statistics
+- Game previews with commentary
+
+### MCP Aggregator
+
+Unified query interface across multiple Model Context Protocol servers:
+
+- **Elastic MCP:** Elasticsearch queries via Agent Builder
+- **BallDontLie MCP:** Live NBA data and current season rosters
+- **Sentiment MCP:** Social media buzz and narrative analysis
+- **NBA MCP:** Legacy Python server support
+
+**Routing Modes:**
+1. **Static Router:** Keyword-based routing (fastest)
+2. **LLM Router:** Claude Sonnet 4.5 semantic routing (recommended)
+3. **Advanced Router:** Experimental scratchpad with code execution
+
+### Data Ingestion Pipeline
+
+Automated NBA data collection and indexing:
+
+- **Player Statistics:** Season averages for tracked players
+- **Game Logs:** Individual game performance history
+- **Live Games:** Real-time score updates (30s intervals)
+- **Game Schedule:** Season schedule with team matchups
+
+**Tracked Players:** LeBron James, Nikola Jokic, Stephen Curry, Luka Doncic, Shai Gilgeous-Alexander, Jayson Tatum, Anthony Edwards, LaMelo Ball, Giannis Antetokounmpo, Joel Embiid
+
+## 🚢 Deployment
+
+### Production Checklist
+
+**Required Configuration:**
+1. Set all CRITICAL environment variables in `.env.local`
+2. Update `NEXT_PUBLIC_WS_URL` to match deployed backend URL
+3. Configure Azure OpenAI credentials for a2a-backend
+4. Set Elastic Agent Builder A2A protocol endpoints
+5. Build all TypeScript services (`npm run build`)
+6. Verify Elasticsearch indexes are created
+
+**Annual Maintenance:**
+- Update `NBA_CURRENT_SEASON` at the start of each NBA season (e.g., "2025-26")
+
+**Optional Enhancements:**
+- Configure Twitter and Reddit API credentials for live sentiment
+- Set BallDontLie API key for enhanced NBA data
+- Tune cache settings (`MCP_CACHE_MAX_SIZE`, `MCP_CACHE_TTL_MS`)
+- Adjust bulk indexing chunk sizes for your Elasticsearch cluster
+
+### Build Commands
+
+```bash
+# Backend services
+cd backend/mcp-aggregator && npm run build
+cd mcp-servers/balldontlie && npm run build
+cd mcp-servers/sentiment && npm run build
+
+# Frontend
+cd nba-commentary-web && npm run build
+
+# Verify builds
+npm run lint  # Check for linting errors
+npm test      # Run test suites
+```
+
+### Environment-Specific Settings
+
+**Development:**
+- Use localhost URLs for all services
+- Enable debug logging (`LOG_LEVEL=debug`)
+- Disable production optimizations
+
+**Production:**
+- Use production URLs and API keys
+- Enable caching for optimal performance
+- Set appropriate timeouts for your infrastructure
+- Use production-grade Elasticsearch cluster
+- Enable monitoring and telemetry
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for:
+- Code style guidelines
+- Development workflow
+- Pull request process
+- Testing requirements
+
+## 🆘 Support
+
+- **Issues:** File bugs and feature requests on GitHub Issues
+- **Troubleshooting:** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
+- **Architecture:** Review [ARCHITECTURE_LLM_SUMMARY.md](./ARCHITECTURE_LLM_SUMMARY.md) for system design
 
 ---
 
