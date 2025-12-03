@@ -1,0 +1,192 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # FRONTEND - Next.js Web Application
+  # =============================================================================
+  frontend:
+    build:
+      context: ./nba-commentary-web
+      dockerfile: Dockerfile
+      target: production
+    container_name: nba-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:3001}
+      - NEXT_PUBLIC_WS_RECONNECT_DELAY_MS=${NEXT_PUBLIC_WS_RECONNECT_DELAY_MS:-3000}
+    depends_on:
+      - backend
+    networks:
+      - nba-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================================================
+  # BACKEND - WebSocket Server (Node.js)
+  # =============================================================================
+  backend:
+    build:
+      context: ./nba-commentary-web/nba-backend
+      dockerfile: Dockerfile
+    container_name: nba-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - PYTHON_BACKEND=${PYTHON_BACKEND:-http://a2a-backend:3002}
+      - AGENTS_API_TIMEOUT_MS=${AGENTS_API_TIMEOUT_MS:-5000}
+      - QUERY_API_TIMEOUT_MS=${QUERY_API_TIMEOUT_MS:-120000}
+      - WORD_STREAMING_DELAY_MS=${WORD_STREAMING_DELAY_MS:-20}
+    depends_on:
+      - mcp-aggregator
+    networks:
+      - nba-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # MCP AGGREGATOR - Multi-MCP Orchestration
+  # =============================================================================
+  mcp-aggregator:
+    build:
+      context: .
+      dockerfile: backend/mcp-aggregator/Dockerfile
+    container_name: nba-mcp-aggregator
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - MCP_AGGREGATOR_PORT=3003
+      - MCP_AGGREGATOR_HOST=0.0.0.0
+      # Elasticsearch & Kibana
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - ELASTICSEARCH_API_KEY=${ELASTICSEARCH_API_KEY}
+      - KIBANA_URL=${KIBANA_URL}
+      # Anthropic Claude API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # LLM Router Configuration
+      - LLM_ROUTER_MODEL=${LLM_ROUTER_MODEL:-claude-sonnet-4-20250514}
+      - LLM_ADVANCED_ROUTER_MODEL=${LLM_ADVANCED_ROUTER_MODEL:-claude-sonnet-4-20250514}
+      - LLM_ROUTER_MAX_TOKENS=${LLM_ROUTER_MAX_TOKENS:-2000}
+      - LLM_ADVANCED_ROUTER_MAX_TOKENS=${LLM_ADVANCED_ROUTER_MAX_TOKENS:-1800}
+      - LLM_ADVANCED_ROUTER_TEMPERATURE=${LLM_ADVANCED_ROUTER_TEMPERATURE:-0.3}
+      # Cache Configuration
+      - MCP_CACHE_MAX_SIZE=${MCP_CACHE_MAX_SIZE:-500}
+      - MCP_CACHE_TTL_MS=${MCP_CACHE_TTL_MS:-300000}
+      - CODE_EXECUTOR_TIMEOUT_MS=${CODE_EXECUTOR_TIMEOUT_MS:-2000}
+      # Feature Flags
+      - USE_NBA_MCP_SERVER=${USE_NBA_MCP_SERVER:-false}
+      - USE_LLM_ROUTER=${USE_LLM_ROUTER:-true}
+      - USE_LLM_ADVANCED_ROUTER=${USE_LLM_ADVANCED_ROUTER:-false}
+      - USE_SENTIMENT_MCP_SERVER=${USE_SENTIMENT_MCP_SERVER:-true}
+      # BallDontLie API
+      - BALLDONTLIE_API_KEY=${BALLDONTLIE_API_KEY}
+      - BALLDONTLIE_API_BASE_URL=${BALLDONTLIE_API_BASE_URL:-https://api.balldontlie.io/v1}
+      - BALLDONTLIE_API_TIMEOUT_MS=${BALLDONTLIE_API_TIMEOUT_MS:-10000}
+      # Sentiment MCP Configuration
+      - TWITTERAPI_API_KEY=${TWITTERAPI_API_KEY}
+      - TWITTERAPI_PROXY_URL=${TWITTERAPI_PROXY_URL}
+      - TWITTER_SENTIMENT_SERVICE=${TWITTER_SENTIMENT_SERVICE:-true}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET}
+      - REDDIT_USERNAME=${REDDIT_USERNAME}
+      - REDDIT_PASSWORD=${REDDIT_PASSWORD}
+      - REDDIT_APP_NAME=${REDDIT_APP_NAME}
+      - SENTIMENT_WINDOW_MINUTES=${SENTIMENT_WINDOW_MINUTES:-180}
+      - SENTIMENT_MAX_SAMPLES=${SENTIMENT_MAX_SAMPLES:-50}
+    networks:
+      - nba-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================================================
+  # A2A BACKEND - Python FastAPI (Optional)
+  # =============================================================================
+  a2a-backend:
+    build:
+      context: ./a2a-backend
+      dockerfile: Dockerfile
+    container_name: nba-a2a-backend
+    ports:
+      - "3002:3002"
+    environment:
+      - FASTAPI_PORT=3002
+      - FASTAPI_HOST=0.0.0.0
+      # Azure OpenAI
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-08-01-preview}
+      # Elastic Agent Builder A2A
+      - ELASTIC_STATS_AGENT_URL=${ELASTIC_STATS_AGENT_URL}
+      - ELASTIC_MEDIA_AGENT_URL=${ELASTIC_MEDIA_AGENT_URL}
+      - ELASTIC_API_KEY=${ELASTIC_API_KEY}
+    networks:
+      - nba-network
+    restart: unless-stopped
+    profiles:
+      - full  # Only start with --profile full
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # DATA INGESTION - Python Scripts (On-demand)
+  # =============================================================================
+  data-ingestion:
+    build:
+      context: ./data/ingest
+      dockerfile: Dockerfile
+    container_name: nba-data-ingestion
+    environment:
+      # Elasticsearch
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - ELASTICSEARCH_API_KEY=${ELASTICSEARCH_API_KEY}
+      # NBA Season
+      - NBA_CURRENT_SEASON=${NBA_CURRENT_SEASON:-2024-25}
+      # Index Names
+      - ES_INDEX_GAME_SCHEDULE=${ES_INDEX_GAME_SCHEDULE:-nba-game-schedule}
+      - ES_INDEX_LIVE_GAMES=${ES_INDEX_LIVE_GAMES:-nba-live-games}
+      - ES_INDEX_PLAYER_STATS=${ES_INDEX_PLAYER_STATS:-nba-player-stats}
+      - ES_INDEX_GAME_LOGS=${ES_INDEX_GAME_LOGS:-nba-player-game-logs}
+      # Bulk Settings
+      - ES_BULK_CHUNK_SIZE=${ES_BULK_CHUNK_SIZE:-100}
+      - ES_BULK_CHUNK_SIZE_GAME_LOGS=${ES_BULK_CHUNK_SIZE_GAME_LOGS:-500}
+      - ES_BULK_CHUNK_SIZE_PLAYER_STATS=${ES_BULK_CHUNK_SIZE_PLAYER_STATS:-500}
+      # Live Games
+      - LIVE_GAMES_UPDATE_INTERVAL_SECONDS=${LIVE_GAMES_UPDATE_INTERVAL_SECONDS:-30}
+    networks:
+      - nba-network
+    profiles:
+      - ingestion  # Only start with --profile ingestion
+    command: /bin/bash -c "echo 'Data ingestion container ready. Use docker exec to run scripts.'"
+
+networks:
+  nba-network:
+    driver: bridge
+    name: nba-network
+
+volumes:
+  node_modules_frontend:
+  node_modules_backend:
+  node_modules_aggregator:

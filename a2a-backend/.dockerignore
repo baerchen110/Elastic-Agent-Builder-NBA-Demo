@@ -1,0 +1,36 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv
+env
+
+# Environment files
+.env
+.env.local
+.env.example
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+app.log
+
+# Git
+.git
+
+# Models (may be large)
+models/*
+
+# Documentation
+*.md
+!README.md
