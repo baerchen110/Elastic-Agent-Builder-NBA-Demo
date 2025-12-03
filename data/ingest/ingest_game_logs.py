@@ -39,10 +39,13 @@ def parse_game_date(date_str):
         return datetime.now(timezone.utc).isoformat()
 
 
-def fetch_player_game_log(player_id, player_name, season='2024-25'):
+def fetch_player_game_log(player_id, player_name, season=None):
     """Fetch game log for a specific player"""
+    if season is None:
+        season = os.getenv('NBA_CURRENT_SEASON', '2024-25')
+
     try:
-        print(f"Fetching game logs for {player_name}...")
+        print(f"Fetching game logs for {player_name} (season: {season})...")
         game_log = playergamelog.PlayerGameLog(
             player_id=player_id,
             season=season,
@@ -84,7 +87,7 @@ def prepare_game_log_actions(df, player_name):
                 minutes = float(min_val)
 
         action = {
-            "_index": "nba-player-game-logs",
+            "_index": os.getenv('ES_INDEX_GAME_LOGS', 'nba-player-game-logs'),
             "_source": {
                 "player_id": str(row['Player_ID']),
                 "player_name": player_name,
@@ -138,7 +141,7 @@ def main():
             success, failed = helpers.bulk(
                 es,
                 all_actions,
-                chunk_size=500,
+                chunk_size=int(os.getenv('ES_BULK_CHUNK_SIZE_GAME_LOGS', '500')),
                 raise_on_error=False  # Don't raise exception, capture failed docs
             )
 

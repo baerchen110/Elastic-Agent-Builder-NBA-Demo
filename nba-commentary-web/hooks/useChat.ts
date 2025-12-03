@@ -19,7 +19,7 @@ export function useChat() {
   useEffect(() => {
     const connectWebSocket = () => {
       try {
-        const wsUrl = `ws://localhost:3001`;
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
         console.log('🔗 Connecting to WebSocket:', wsUrl);
 
         wsRef.current = new WebSocket(wsUrl);
@@ -54,7 +54,8 @@ export function useChat() {
             ...prev,
             connectionStatus: 'disconnected'
           }));
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
+          const reconnectDelay = parseInt(process.env.NEXT_PUBLIC_WS_RECONNECT_DELAY_MS || '3000', 10);
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, reconnectDelay);
         };
       } catch (error) {
         console.error('Connection error:', error);

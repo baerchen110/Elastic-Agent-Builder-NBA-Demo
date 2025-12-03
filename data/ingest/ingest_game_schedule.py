@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 import os
 
 # Elasticsearch configuration
-INDEX_NAME = "nba-game-schedule"
+INDEX_NAME = os.getenv('ES_INDEX_GAME_SCHEDULE', 'nba-game-schedule')
 
 # NBA schedule API endpoint
-NBA_SCHEDULE_URL = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"
+NBA_SCHEDULE_URL = os.getenv('NBA_SCHEDULE_API_URL', 'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json')
 
 
 def create_index_with_mapping(es_client):
@@ -152,7 +152,7 @@ def index_games_to_elasticsearch(es_client, documents):
         success_count, error_list = bulk(
             es_client,
             documents,
-            chunk_size=100,
+            chunk_size=int(os.getenv('ES_BULK_CHUNK_SIZE', '100')),
             raise_on_error=False
         )
 

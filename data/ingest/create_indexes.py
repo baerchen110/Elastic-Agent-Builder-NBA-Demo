@@ -12,7 +12,7 @@ es = Elasticsearch(
 
 def create_player_stats_index():
     """Create index for season player statistics"""
-    index_name = 'nba-player-stats'
+    index_name = os.getenv('ES_INDEX_PLAYER_STATS', 'nba-player-stats')
 
     mapping = {
         "mappings": {
@@ -50,7 +50,7 @@ def create_player_stats_index():
 
 def create_live_games_index():
     """Create index for live game data"""
-    index_name = 'nba-live-games'
+    index_name = os.getenv('ES_INDEX_LIVE_GAMES', 'nba-live-games')
 
     mapping = {
         "mappings": {
@@ -81,7 +81,7 @@ def create_live_games_index():
 
 def create_player_game_logs_index():
     """Create index for individual game logs"""
-    index_name = 'nba-player-game-logs'
+    index_name = os.getenv('ES_INDEX_GAME_LOGS', 'nba-player-game-logs')
 
     mapping = {
         "mappings": {

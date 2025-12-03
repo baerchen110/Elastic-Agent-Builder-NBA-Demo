@@ -55,7 +55,7 @@ app.get('/health', (req, res) => {
 app.get('/api/agents', async (req, res) => {
   try {
     const response = await axios.get(`${PYTHON_BACKEND}/api/agents`, {
-      timeout: 5000
+      timeout: parseInt(process.env.AGENTS_API_TIMEOUT_MS || '5000', 10)
     });
     res.json(response.data);
   } catch (error) {
@@ -226,7 +226,7 @@ wss.on('connection', (ws) => {
             { query },
             {
               headers: { 'Content-Type': 'application/json' },
-              timeout: 120000
+              timeout: parseInt(process.env.QUERY_API_TIMEOUT_MS || '120000', 10)
             }
           );
 
@@ -337,8 +337,9 @@ async function streamResponse(ws, content, agentsUsed = []) {
       timestamp: new Date().toISOString()
     }));
 
-    // 20ms delay between words for streaming effect
-    await new Promise(resolve => setTimeout(resolve, 20));
+    // Configurable delay between words for streaming effect
+    const streamingDelay = parseInt(process.env.WORD_STREAMING_DELAY_MS || '20', 10);
+    await new Promise(resolve => setTimeout(resolve, streamingDelay));
   }
 
   // Send completion message
